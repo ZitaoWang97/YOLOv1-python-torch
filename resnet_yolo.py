@@ -16,14 +16,14 @@ model_urls = {
 
 
 def conv3x3(in_planes, out_planes, stride=1):
-    "3x3 convolution with padding"
     return nn.Conv2d(in_channels=in_planes, out_channels=out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
-
+    # 参数分为别输入通道数、输出通道数、卷积核大小、滑动步长、padding大小、是否将学习到的bias加到输出中
 
 class BasicBlock(nn.Module):
-    expansion = 1
-
+    # 结构：input --> conv1 --> BN --> ReLU --> conv2 --> BN --> + --> ReLU --> out
+    #        |                                                  |
+    #         --------------------residual----------------------
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -33,6 +33,7 @@ class BasicBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
+        self.expansion = 1
 
     def forward(self, x):
         residual = x
@@ -54,7 +55,7 @@ class BasicBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
-    expansion = 4
+    # 区别于BasicBlock这里有3个conv层
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
@@ -68,6 +69,7 @@ class Bottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.expansion = 4
 
     def forward(self, x):
         residual = x
@@ -96,7 +98,7 @@ class detnet_bottleneck(nn.Module):
     # no expansion
     # dilation = 2
     # type B use 1x1 conv
-    expansion = 1
+    # 引入了空洞卷积，增加感受野
 
     def __init__(self, in_planes, planes, stride=1, block_type='A'):
         super(detnet_bottleneck, self).__init__()
@@ -104,14 +106,15 @@ class detnet_bottleneck(nn.Module):
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=2, bias=False, dilation=2)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(self.expansion * planes)
+        self.conv3 = nn.Conv2d(planes, planes, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes)
 
         self.downsample = nn.Sequential()
-        if stride != 1 or in_planes != self.expansion * planes or block_type == 'B':
+        # 一个有序的容器，神经网络模块将按照在传入构造器的顺序依次被添加到计算图中执行，同时以神经网络模块为元素的有序字典也可以作为传入参数。
+        if stride != 1 or in_planes != planes or block_type == 'B':
             self.downsample = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion * planes)
+                nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes)
             )
 
     def forward(self, x):
@@ -124,7 +127,8 @@ class detnet_bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-
+    # 以res50为例：model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+    # block = Bottleneck
     def __init__(self, block, layers, num_classes=1470):
         self.inplanes = 64
         super(ResNet, self).__init__()
@@ -152,8 +156,11 @@ class ResNet(nn.Module):
                 m.bias.data.zero_()
 
     def _make_layer(self, block, planes, blocks, stride=1):
+        # self.layer1 = self._make_layer(block, 64, layers[0])
+        # 构建Resnet的conv2，其中conv2_1和2都是64通道，所以这边planes=64，blocks=3，共三层
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
+            # 如果s不等于1（说明输出与输入的尺寸不一致），或是通道数目不一致，那么需要在residual部分进行downsample使得两个tensor各尺寸一致
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
