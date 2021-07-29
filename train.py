@@ -7,8 +7,8 @@ import torchvision.transforms as transforms
 from torchvision import models
 from torch.autograd import Variable
 
-from net import vgg16, vgg16_bn
-from resnet_yolo import resnet50, resnet18
+from net import vgg16_bn
+from resnet_yolo import resnet50
 from yoloLoss import yoloLoss
 from dataset import yoloDataset
 

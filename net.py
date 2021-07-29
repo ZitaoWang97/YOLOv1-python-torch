@@ -44,9 +44,10 @@ class VGG(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
-            nn.Dropout(),
+            nn.Dropout(), # 在不同的训练过程中随机扔掉一部分神经元，让某个神经元的激活值以一定的概率p停止工作，在这次训练过程中不更新权值，也不参加神经网络的计算。但是它的权重得保留下来（只是暂时不更新而已）
             nn.Linear(4096, 1470),
         )
+        # 修改后的全连接层
         self._initialize_weights()
 
     def forward(self, x):
@@ -62,6 +63,7 @@ class VGG(nn.Module):
         return x
 
     def _initialize_weights(self):
+        # 参数初始化
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
