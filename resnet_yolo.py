@@ -2,6 +2,7 @@ import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
 import torch.nn.functional as F
+import torch
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152']
@@ -33,7 +34,6 @@ class BasicBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
-        self.expansion = 1
 
     def forward(self, x):
         residual = x
@@ -56,6 +56,7 @@ class BasicBlock(nn.Module):
 
 class Bottleneck(nn.Module):
     # 区别于BasicBlock这里有3个conv层
+    expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
@@ -69,7 +70,7 @@ class Bottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
-        self.expansion = 4
+
 
     def forward(self, x):
         residual = x
@@ -198,7 +199,7 @@ class ResNet(nn.Module):
         # x = self.fc(x)
         x = self.conv_end(x)
         x = self.bn_end(x)
-        x = F.sigmoid(x)  # 归一化到0-1
+        x = torch.sigmoid(x)  # 归一化到0-1
         # x = x.view(-1,7,7,30)
         x = x.permute(0, 2, 3, 1)  # (-1,7,7,30)
 
@@ -237,7 +238,7 @@ def resnet50(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']),strict=False)
     return model
 
 
@@ -263,3 +264,17 @@ def resnet152(pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
+
+def test():
+    import torch
+    from torch.autograd import Variable
+    model = resnet50(pretrained=True)
+    print(model)
+    print(model.modules())
+    img = torch.rand(2,3,224,224)
+    img = Variable(img)
+    output = model(img)
+    print(output.size())
+
+if __name__ == '__main__':
+    test()
