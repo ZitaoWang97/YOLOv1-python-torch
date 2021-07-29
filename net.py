@@ -45,7 +45,10 @@ class VGG(nn.Module):
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
             nn.Dropout(), # 在不同的训练过程中随机扔掉一部分神经元，让某个神经元的激活值以一定的概率p停止工作，在这次训练过程中不更新权值，也不参加神经网络的计算。但是它的权重得保留下来（只是暂时不更新而已）
-            nn.Linear(4096, 1470),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 1000),
         )
         # 修改后的全连接层
         self._initialize_weights()
@@ -99,12 +102,12 @@ def make_layers(cfg, batch_norm=False):
             in_channels = v
     return nn.Sequential(*layers)
 
-def conv_bn_relu(in_channels,out_channels,kernel_size=3,stride=2,padding=1):
-    return nn.Sequential(
-        nn.Conv2d(in_channels,out_channels,kernel_size=kernel_size,padding=padding,stride=stride),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(True)
-    )
+# def conv_bn_relu(in_channels,out_channels,kernel_size=3,stride=2,padding=1):
+#     return nn.Sequential(
+#         nn.Conv2d(in_channels,out_channels,kernel_size=kernel_size,padding=padding,stride=stride),
+#         nn.BatchNorm2d(out_channels),
+#         nn.ReLU(True)
+#     )
 
 
 cfg = {
@@ -223,7 +226,7 @@ def test():
             nn.Dropout(),
             nn.Linear(4096, 1470),
         )
-    print(model.classifier[6])
+    # print(model.classifier[3])
     print(model)
     img = torch.rand(2,3,448,448)
     img = Variable(img)
