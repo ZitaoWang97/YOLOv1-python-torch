@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 import math
-import torch.nn.functional as F
+import torch
 
 
 __all__ = [
@@ -58,7 +58,7 @@ class VGG(nn.Module):
         #     x = self.downsample(x)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
-        x = F.sigmoid(x) #归一化到0-1
+        x = torch.sigmoid(x) #归一化到0-1
         x = x.view(-1,7,7,30)
         return x
 
@@ -85,7 +85,7 @@ def make_layers(cfg, batch_norm=False):
     first_flag=True
     for v in cfg:
         s=1
-        if (v==64 and first_flag):
+        if v == 64 and first_flag:
             s=2
             first_flag=False
         if v == 'M':
@@ -213,7 +213,7 @@ def vgg19_bn(pretrained=False, **kwargs):
 def test():
     import torch
     from torch.autograd import Variable
-    model = vgg16()
+    model = vgg16_bn(pretrained=True)
     model.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
@@ -224,8 +224,8 @@ def test():
             nn.Linear(4096, 1470),
         )
     print(model.classifier[6])
-    #print(model)
-    img = torch.rand(2,3,224,224)
+    print(model)
+    img = torch.rand(2,3,448,448)
     img = Variable(img)
     output = model(img)
     print(output.size())
