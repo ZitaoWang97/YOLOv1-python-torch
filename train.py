@@ -17,7 +17,7 @@ import numpy as np
 
 use_gpu = torch.cuda.is_available()
 
-file_root = '/home/xzh/data/VOCdevkit/VOC2012/allimgs/'
+file_root = '''/all_img'''
 learning_rate = 0.001
 num_epochs = 50
 batch_size = 24
@@ -87,7 +87,7 @@ optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=0.9, weight_decay
 # optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 # train_dataset = yoloDataset(root=file_root,list_file=['voc12_trainval.txt','voc07_trainval.txt'],train=True,transform = [transforms.ToTensor()] )
-train_dataset = yoloDataset(root=file_root, list_file=['voc2012.txt', 'voc2007.txt'], train=True,
+train_dataset = yoloDataset(root=file_root, list_file='voc2012.txt', train=True,
                             transform=[transforms.ToTensor()])
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 # test_dataset = yoloDataset(root=file_root,list_file='voc07_test.txt',train=False,transform = [transforms.ToTensor()] )
@@ -162,6 +162,6 @@ for epoch in range(num_epochs):
         torch.save(net.state_dict(), 'best.pth')
     logfile.writelines(str(epoch) + '\t' + str(validation_loss) + '\n')
     logfile.flush()
-    torch.save(net.state_dict(), 'yolo.pth')
+    torch.save(net.state_dict(), '/yolo.pth')
 
 
