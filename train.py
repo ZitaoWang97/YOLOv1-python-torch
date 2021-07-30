@@ -15,17 +15,21 @@ from dataset import yoloDataset
 from visualize import Visualizer
 import numpy as np
 
+import warnings
+warnings.filterwarnings("ignore")
+
 use_gpu = torch.cuda.is_available()
 
-file_root = '''/all_img'''
+file_root = '''all_img'''
 learning_rate = 0.001
 num_epochs = 50
-batch_size = 24
+batch_size = 6
 use_resnet = True
 if use_resnet:
     net = resnet50()
 else:
     net = vgg16_bn()
+
 # net.classifier = nn.Sequential(
 #             nn.Linear(512 * 7 * 7, 4096),
 #             nn.ReLU(True),
@@ -42,17 +46,19 @@ else:
 #     if isinstance(m, nn.Linear):
 #         m.weight.data.normal_(0, 0.01)
 #         m.bias.data.zero_()
-print(net)
 # net.load_state_dict(torch.load('yolo.pth'))
+
+# print(net)
+
 print('load pre-trined model')
 if use_resnet:
     resnet = models.resnet50(pretrained=True) # 运用torchvision.models中已经预训练好的resnet
     new_state_dict = resnet.state_dict()
     dd = net.state_dict()
     for k in new_state_dict.keys(): # 这样写避免了missing keys & unexpected keys的error
-        print(k)
+        # print(k)
         if k in dd.keys() and not k.startswith('fc'):
-            print('yes')
+            # print('yes')
             dd[k] = new_state_dict[k]
     net.load_state_dict(dd)
 else:
@@ -89,16 +95,16 @@ optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=0.9, weight_decay
 # train_dataset = yoloDataset(root=file_root,list_file=['voc12_trainval.txt','voc07_trainval.txt'],train=True,transform = [transforms.ToTensor()] )
 train_dataset = yoloDataset(root=file_root, list_file='voc2012.txt', train=True,
                             transform=[transforms.ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 # test_dataset = yoloDataset(root=file_root,list_file='voc07_test.txt',train=False,transform = [transforms.ToTensor()] )
 test_dataset = yoloDataset(root=file_root, list_file='voc2007test.txt', train=False, transform=[transforms.ToTensor()])
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-print('the dataset has %d images' % (len(train_dataset)))
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+print('the train_dataset has %d images' % (len(train_dataset)))
 print('the batch_size is %d' % (batch_size))
 logfile = open('log.txt', 'w')
 
 num_iter = 0
-vis = Visualizer(env='Wang')
+# vis = Visualizer(env='Wang')
 best_test_loss = np.inf
 
 for epoch in range(num_epochs):
@@ -130,16 +136,16 @@ for epoch in range(num_epochs):
 
         pred = net(images)
         loss = criterion(pred, target) # criterion = yoloLoss(7, 2, 5, 0.5)
-        total_loss += loss.data[0]
+        total_loss += loss.item()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         if (i + 1) % 5 == 0:
             print('Epoch [%d/%d], Iter [%d/%d] Loss: %.4f, average_loss: %.4f'
-                  % (epoch + 1, num_epochs, i + 1, len(train_loader), loss.data[0], total_loss / (i + 1)))
+                  % (epoch + 1, num_epochs, i + 1, len(train_loader), loss.item(), total_loss / (i + 1)))
             num_iter += 1
-            vis.plot_train_val(loss_train=total_loss / (i + 1))
+            # vis.plot_train_val(loss_train=total_loss / (i + 1))
 
     # validation
     validation_loss = 0.0
@@ -154,7 +160,7 @@ for epoch in range(num_epochs):
         loss = criterion(pred, target)
         validation_loss += loss.data[0]
     validation_loss /= len(test_loader)
-    vis.plot_train_val(loss_val=validation_loss)
+    # vis.plot_train_val(loss_val=validation_loss)
 
     if best_test_loss > validation_loss:
         best_test_loss = validation_loss
@@ -162,6 +168,6 @@ for epoch in range(num_epochs):
         torch.save(net.state_dict(), 'best.pth')
     logfile.writelines(str(epoch) + '\t' + str(validation_loss) + '\n')
     logfile.flush()
-    torch.save(net.state_dict(), '/yolo.pth')
+    torch.save(net.state_dict(), 'yolo.pth')
 
 
