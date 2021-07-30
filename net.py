@@ -89,7 +89,7 @@ def make_layers(cfg, batch_norm=False):
     for v in cfg:
         s=1
         if v == 64 and first_flag:
-            s=2
+            s=1
             first_flag=False
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -216,7 +216,7 @@ def vgg19_bn(pretrained=False, **kwargs):
 def test():
     import torch
     from torch.autograd import Variable
-    model = vgg16_bn(pretrained=False)
+    model = vgg16_bn(pretrained=True)
     model.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
@@ -228,11 +228,11 @@ def test():
         )
     # print(model.classifier[3])
     print(model)
-    print(model.modules())
-    print(model.state_dict().keys())
-    for para in model.named_parameters():
-        print(para[0])
-    img = torch.rand(2,3,448,448)
+    # print(model.modules())
+    # print(model.state_dict().keys())
+    # for para in model.named_parameters():
+    #     print(para[0])
+    img = torch.rand(2,3,224,224)
     img = Variable(img)
     output = model(img)
     print(output.size())
