@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 
 
 class yoloDataset(data.Dataset):
-    image_size = 448
+    image_size = 224
 
     def __init__(self, root, list_file, train, transform):
         print('data init')
-        self.root = root
+        self.root = root # file path
         self.train = train
         self.transform = transform
         self.fnames = []
@@ -27,10 +27,11 @@ class yoloDataset(data.Dataset):
         self.mean = (123, 117, 104)  # RGB
 
         if isinstance(list_file, list):
+            # ex:list_file=['voc2012.txt', 'voc2007.txt']
             # Cat multiple list files together.
             # This is especially useful for voc07/voc12 combination.
-            tmp_file = '/tmp/listfile.txt'
-            os.system('cat %s > %s' % (' '.join(list_file), tmp_file))
+            tmp_file = '/listfile.txt'
+            os.system('cat %s > %s' % (' '.join(list_file), tmp_file)) # 把'voc2012.txt voc2007.txt'的内容放入到tmp_file中
             list_file = tmp_file
 
         with open(list_file) as f:
@@ -50,13 +51,13 @@ class yoloDataset(data.Dataset):
                 c = splited[5 + 5 * i]
                 box.append([x, y, x2, y2])
                 label.append(int(c) + 1)
-            self.boxes.append(torch.Tensor(box))
+            self.boxes.append(torch.Tensor(box)) # list of [num_boxes,4]'s size tensor
             self.labels.append(torch.LongTensor(label))
-        self.num_samples = len(self.boxes)
+        self.num_samples = len(self.boxes) # num of img
 
     def __getitem__(self, idx):
         fname = self.fnames[idx]
-        img = cv2.imread(os.path.join(self.root + fname))
+        img = cv2.imread(os.path.join(self.root, fname))
         boxes = self.boxes[idx].clone()
         labels = self.labels[idx].clone()
 
@@ -66,8 +67,8 @@ class yoloDataset(data.Dataset):
             img, boxes = self.randomScale(img, boxes)
             img = self.randomBlur(img)
             img = self.RandomBrightness(img)
-            img = self.RandomHue(img)
-            img = self.RandomSaturation(img)
+            img = self.RandomHue(img)  # hue:色调
+            img = self.RandomSaturation(img)  # saturation:饱和度
             img, boxes, labels = self.randomShift(img, boxes, labels)
             img, boxes, labels = self.randomCrop(img, boxes, labels)
         # #debug
@@ -83,12 +84,12 @@ class yoloDataset(data.Dataset):
         # plt.show()
         # #debug
         h, w, _ = img.shape
-        boxes /= torch.Tensor([w, h, w, h]).expand_as(boxes)
+        boxes /= torch.Tensor([w, h, w, h]).expand_as(boxes) # boxes本来是[xmin,ymin,xmax,ymax],去直接除以img的原始尺寸
         img = self.BGR2RGB(img)  # because pytorch pretrained model use RGB
         img = self.subMean(img, self.mean)  # 减去均值
         img = cv2.resize(img, (self.image_size, self.image_size))
         target = self.encoder(boxes, labels)  # 7x7x30
-        for t in self.transform:
+        for t in self.transform: # transform=[transforms.ToTensor()]
             img = t(img)
 
         return img, target
@@ -99,20 +100,21 @@ class yoloDataset(data.Dataset):
     def encoder(self, boxes, labels):
         '''
         boxes (tensor) [[x1,y1,x2,y2],[]]
+        boxes:[num_boxes,4]
         labels (tensor) [...]
         return 7x7x30
         '''
-        grid_num = 14
+        grid_num = 7
         target = torch.zeros((grid_num, grid_num, 30))
         cell_size = 1. / grid_num
         wh = boxes[:, 2:] - boxes[:, :2]
-        cxcy = (boxes[:, 2:] + boxes[:, :2]) / 2
+        cxcy = (boxes[:, 2:] + boxes[:, :2]) / 2 # center of box (cx,cy) cx=x/w cy=y/h
         for i in range(cxcy.size()[0]):
-            cxcy_sample = cxcy[i]
-            ij = (cxcy_sample / cell_size).ceil() - 1  #
+            cxcy_sample = cxcy[i] # 第i个box的cxcy
+            ij = (cxcy_sample / cell_size).ceil() - 1  #ceil返回上入整数，得到grid的左上角对应index
             target[int(ij[1]), int(ij[0]), 4] = 1
-            target[int(ij[1]), int(ij[0]), 9] = 1
-            target[int(ij[1]), int(ij[0]), int(labels[i]) + 9] = 1
+            target[int(ij[1]), int(ij[0]), 9] = 1 # 给对应的confidence打上1
+            target[int(ij[1]), int(ij[0]), int(labels[i]) + 9] = 1 # 给对应的class i 打上1的标签
             xy = ij * cell_size  # 匹配到的网格的左上角相对坐标
             delta_xy = (cxcy_sample - xy) / cell_size
             target[int(ij[1]), int(ij[0]), 2:4] = wh[i]
@@ -276,8 +278,8 @@ class yoloDataset(data.Dataset):
 def main():
     from torch.utils.data import DataLoader
     import torchvision.transforms as transforms
-    file_root = '/home/xzh/data/VOCdevkit/VOC2012/allimgs/'
-    train_dataset = yoloDataset(root=file_root, list_file='voc12_trainval.txt', train=True,
+    file_root = '''E:\VOCDataset\VOCdevkit\VOC2012\JPEGImages'''
+    train_dataset = yoloDataset(root=file_root, list_file='voc2012.txt', train=True,
                                 transform=[transforms.ToTensor()])
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=0)
     train_iter = iter(train_loader)
