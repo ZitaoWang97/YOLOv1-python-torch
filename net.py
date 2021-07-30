@@ -216,7 +216,7 @@ def vgg19_bn(pretrained=False, **kwargs):
 def test():
     import torch
     from torch.autograd import Variable
-    model = vgg16_bn(pretrained=True)
+    model = vgg16_bn(pretrained=False)
     model.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
@@ -228,6 +228,10 @@ def test():
         )
     # print(model.classifier[3])
     print(model)
+    print(model.modules())
+    print(model.state_dict().keys())
+    for para in model.named_parameters():
+        print(para[0])
     img = torch.rand(2,3,448,448)
     img = Variable(img)
     output = model(img)
