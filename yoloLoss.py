@@ -67,26 +67,26 @@ class yoloLoss(nn.Module):
         # compute not contain obj loss
         noo_pred = pred_tensor[noo_mask].view(-1, 30)  # [N*noobj_grid,30]
         noo_target = target_tensor[noo_mask].view(-1, 30)  # [N*noobj_grid,30]
-        noo_pred_mask = torch.cuda.ByteTensor(noo_pred.size())  # [N*noobj_grid,30]
+        noo_pred_mask = torch.cuda.ByteTensor(noo_pred.size()).bool()  # [N*noobj_grid,30]
         noo_pred_mask.zero_()  # fill tensor with 0
         noo_pred_mask[:, 4] = 1
         noo_pred_mask[:, 9] = 1
         noo_pred_c = noo_pred[noo_pred_mask]  # noo_pred只需要计算confidence的损失,[N*noobj_grid,30] 30维向量中，pred只剩下两个confidence的预测值（i=4&9)
         noo_target_c = noo_target[noo_pred_mask] # target的confidence值为0
-        nooobj_loss = F.mse_loss(noo_pred_c, noo_target_c, size_average=False)
+        nooobj_loss = F.mse_loss(noo_pred_c, noo_target_c, reduction='sum')
 
         # compute contain obj loss
-        coo_response_mask = torch.cuda.ByteTensor(box_target.size())  # [N*obj_grid*2,5]
+        coo_response_mask = torch.cuda.ByteTensor(box_target.size()).bool()  # [N*obj_grid*2,5]
         coo_response_mask.zero_()
-        coo_not_response_mask = torch.cuda.ByteTensor(box_target.size())  # [N*obj_grid*2,5]
+        coo_not_response_mask = torch.cuda.ByteTensor(box_target.size()).bool()  # [N*obj_grid*2,5]
         coo_not_response_mask.zero_()
         box_target_iou = torch.zeros(box_target.size()).cuda()  # [N*obj_grid*2,5]
         for i in range(0, box_target.size()[0], 2):  # choose the best iou box,i = range(0,N*obj_grid*2,2)
-            box1 = box_pred[i:i + 2]  # [2,5]属于同一个grid
+            box1 = box_pred[i:i + 2,:]  # [2,5]属于同一个grid
             box1_xyxy = Variable(torch.FloatTensor(box1.size()))  # [2,5]
             box1_xyxy[:, :2] = box1[:, :2] / 7. - 0.5 * box1[:, 2:4]
             box1_xyxy[:, 2:4] = box1[:, :2] / 7. + 0.5 * box1[:, 2:4]
-            box2 = box_target[i]
+            box2 = box_target[i].unsqueeze(0)
             box2_xyxy = Variable(torch.FloatTensor(box2.size()))
             box2_xyxy[:, :2] = box2[:, :2] / 7. - 0.5 * box2[:, 2:4]
             box2_xyxy[:, 2:4] = box2[:, :2] / 7. + 0.5 * box2[:, 2:4]
@@ -108,9 +108,9 @@ class yoloLoss(nn.Module):
         box_pred_response = box_pred[coo_response_mask].view(-1, 5)  # [N*obj_grid,5] 对应有物体的grid的IOU较大的那个box的location信息
         box_target_response_iou = box_target_iou[coo_response_mask].view(-1, 5)  # [N*obj_grid*2,5] 实际上预测框和ground truth BB的IOU（online计算）
         box_target_response = box_target[coo_response_mask].view(-1, 5)  # [N*obj_grid*2,5] ground truth的location值（C值就不用了，因为都是1）
-        contain_loss = F.mse_loss(box_pred_response[:, 4], box_target_response_iou[:, 4], size_average=False)
-        loc_loss = F.mse_loss(box_pred_response[:, :2], box_target_response[:, :2], size_average=False) + F.mse_loss(
-            torch.sqrt(box_pred_response[:, 2:4]), torch.sqrt(box_target_response[:, 2:4]), size_average=False)
+        contain_loss = F.mse_loss(box_pred_response[:, 4], box_target_response_iou[:, 4], reduction='sum')
+        loc_loss = F.mse_loss(box_pred_response[:, :2], box_target_response[:, :2], reduction='sum') + F.mse_loss(
+            torch.sqrt(box_pred_response[:, 2:4]), torch.sqrt(box_target_response[:, 2:4]), reduction='sum')
         # 2.not response loss 所以confidence loss可以分为两部分
         box_pred_not_response = box_pred[coo_not_response_mask].view(-1, 5)
         box_target_not_response = box_target[coo_not_response_mask].view(-1, 5)
@@ -118,10 +118,10 @@ class yoloLoss(nn.Module):
         # not_contain_loss = F.mse_loss(box_pred_response[:,4],box_target_response[:,4],size_average=False)
 
         # I believe this bug is simply a typo
-        not_contain_loss = F.mse_loss(box_pred_not_response[:, 4], box_target_not_response[:, 4], size_average=False)
+        not_contain_loss = F.mse_loss(box_pred_not_response[:, 4], box_target_not_response[:, 4], reduction='sum')
 
         # 3.class loss
-        class_loss = F.mse_loss(class_pred, class_target, size_average=False)
+        class_loss = F.mse_loss(class_pred, class_target, reduction='sum')
 
         return (
                            self.l_coord * loc_loss + 2 * contain_loss + not_contain_loss + self.l_noobj * nooobj_loss + class_loss) / N
