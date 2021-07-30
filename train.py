@@ -46,10 +46,10 @@ print(net)
 # net.load_state_dict(torch.load('yolo.pth'))
 print('load pre-trined model')
 if use_resnet:
-    resnet = models.resnet50(pretrained=True)
+    resnet = models.resnet50(pretrained=True) # 运用torchvision.models中已经预训练好的resnet
     new_state_dict = resnet.state_dict()
     dd = net.state_dict()
-    for k in new_state_dict.keys():
+    for k in new_state_dict.keys(): # 这样写避免了missing keys & unexpected keys的error
         print(k)
         if k in dd.keys() and not k.startswith('fc'):
             print('yes')
@@ -65,8 +65,8 @@ else:
             print('yes')
             dd[k] = new_state_dict[k]
     net.load_state_dict(dd)
-if False:
-    net.load_state_dict(torch.load('best.pth'))
+# if False:
+#     net.load_state_dict(torch.load('best.pth'))
 print('cuda', torch.cuda.current_device(), torch.cuda.device_count())
 
 criterion = yoloLoss(7, 2, 5, 0.5)
@@ -83,6 +83,7 @@ for key, value in params_dict.items():
     else:
         params += [{'params': [value], 'lr': learning_rate}]
 optimizer = torch.optim.SGD(params, lr=learning_rate, momentum=0.9, weight_decay=5e-4)
+# momentum：动量因子；weight_decay:权重衰减（L2正则化）防止过拟合
 # optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate,weight_decay=1e-4)
 
 # train_dataset = yoloDataset(root=file_root,list_file=['voc12_trainval.txt','voc07_trainval.txt'],train=True,transform = [transforms.ToTensor()] )
@@ -97,7 +98,7 @@ print('the batch_size is %d' % (batch_size))
 logfile = open('log.txt', 'w')
 
 num_iter = 0
-vis = Visualizer(env='xiong')
+vis = Visualizer(env='Wang')
 best_test_loss = np.inf
 
 for epoch in range(num_epochs):
@@ -128,7 +129,7 @@ for epoch in range(num_epochs):
             images, target = images.cuda(), target.cuda()
 
         pred = net(images)
-        loss = criterion(pred, target)
+        loss = criterion(pred, target) # criterion = yoloLoss(7, 2, 5, 0.5)
         total_loss += loss.data[0]
 
         optimizer.zero_grad()
