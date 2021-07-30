@@ -32,22 +32,22 @@ def parse_rec(filename):
     return objects
 
 txt_file = open('voc2007test.txt','w')
-test_file = open('voc07testimg.txt','r')
-lines = test_file.readlines()
-lines = [x[:-1] for x in lines]
-print(lines)
+# test_file = open('voc07testimg.txt','r')
+# lines = test_file.readlines()
+# lines = [x[:-1] for x in lines]
+# print(lines)
 
-Annotations = '/home/xzh/data/VOCdevkit/VOC2007/Annotations/'
+Annotations = '''E:\VOCDataset\VOCdevkit\VOC2007\Annotations'''
 xml_files = os.listdir(Annotations)
 
 count = 0
 for xml_file in xml_files:
     count += 1
-    if xml_file.split('.')[0] not in lines:
-        # print(xml_file.split('.')[0])
-        continue
+    # if xml_file.split('.')[0] not in lines:
+    #     # print(xml_file.split('.')[0])
+    #     continue
     image_path = xml_file.split('.')[0] + '.jpg'
-    results = parse_rec(Annotations + xml_file)
+    results = parse_rec(Annotations + '\\' + xml_file)
     if len(results)==0:
         print(xml_file)
         continue
@@ -60,6 +60,6 @@ for xml_file in xml_files:
         class_name = VOC_CLASSES.index(class_name)
         txt_file.write(' '+str(bbox[0])+' '+str(bbox[1])+' '+str(bbox[2])+' '+str(bbox[3])+' '+str(class_name))
     txt_file.write('\n')
-    #if count == 10:
-    #    break
+    if count == 10:
+       break
 txt_file.close()
