@@ -71,7 +71,8 @@ def decoder(pred):
                     box_xy = torch.FloatTensor(box.size())  # 转换成box左上角和右下角坐标，convert[cx,cy,w,h] to [x1,y1,x2,y2]
                     box_xy[:2] = box[:2] - 0.5 * box[2:]
                     box_xy[2:] = box[:2] + 0.5 * box[2:]
-                    max_prob, cls_index = torch.max(pred[i, j, 10:], 0)
+                    max_prob, cls_index = torch.max(pred[i, j, 10:], 0) # size([])
+                    cls_index = cls_index.unsqueeze(0)
                     if float((contain_prob * max_prob)[0]) > 0.1:  # confidence * pr(class|obj) = IOU * pr(class)
                         boxes.append(box_xy.view(1, 4))  # boxes = [ tensor([4])...]
                         cls_indexs.append(cls_index)  # cls_indexes = [ tensor(1)...]
@@ -162,7 +163,7 @@ def predict_gpu(model, image_name, root_path=''):
 if __name__ == '__main__':
     model = resnet50()
     print('load model...')
-    model.load_state_dict(torch.load('yolo.pth'))
+    model.load_state_dict(torch.load('best.pth'))
     model.eval()
     model.cuda()
     image_name = 'cat.jpg'
