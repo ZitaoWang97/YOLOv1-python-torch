@@ -18,8 +18,6 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
-use_gpu = torch.cuda.is_available()
-
 file_root = '''all_img'''
 learning_rate = 0.001
 num_epochs = 50
@@ -76,8 +74,8 @@ else:
 print('cuda', torch.cuda.current_device(), torch.cuda.device_count())
 
 criterion = yoloLoss(7, 2, 5, 0.5)
-if use_gpu:
-    net.cuda()
+device= torch.device("cuda:0" if torch.cuda.is_available()else "cpu")
+net.to(device)
 
 net.train()
 # different learning rate
@@ -131,16 +129,14 @@ for epoch in range(num_epochs):
     for i, (images, target) in enumerate(train_loader):
         images = Variable(images)
         target = Variable(target)
-        if use_gpu:
-            images, target = images.cuda(), target.cuda()
-
+        images, target = images.to(device), target.to(device)
+        optimizer.zero_grad()
         pred = net(images)
         loss = criterion(pred, target) # criterion = yoloLoss(7, 2, 5, 0.5)
         total_loss += loss.item()
-
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
         if (i + 1) % 5 == 0:
             print('Epoch [%d/%d], Iter [%d/%d] Loss: %.4f, average_loss: %.4f'
                   % (epoch + 1, num_epochs, i + 1, len(train_loader), loss.item(), total_loss / (i + 1)))
@@ -153,8 +149,7 @@ for epoch in range(num_epochs):
     for i, (images, target) in enumerate(test_loader):
         images = Variable(images, volatile=True)
         target = Variable(target, volatile=True)
-        if use_gpu:
-            images, target = images.cuda(), target.cuda()
+        images, target = images.to(device), target.to(device)
 
         pred = net(images)
         loss = criterion(pred, target)
