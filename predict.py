@@ -130,7 +130,7 @@ def nms(bboxes, scores, threshold=0.5):
 #
 def predict_gpu(model, image_name, root_path=''):
     result = []
-    image = cv2.imread(root_path + '\\' + image_name)
+    image = cv2.imread(root_path + image_name)
     h, w, _ = image.shape
     img = cv2.resize(image, (224, 224))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -139,7 +139,7 @@ def predict_gpu(model, image_name, root_path=''):
 
     transform = transforms.Compose([transforms.ToTensor(), ])
     img = transform(img)
-    img = Variable(img[None, :, :, :], volatile=True)
+    img = Variable(img[None, :, :, :])
     img = img.cuda()
 
     pred = model(img)  # 1x7x7x30
@@ -162,10 +162,10 @@ def predict_gpu(model, image_name, root_path=''):
 if __name__ == '__main__':
     model = resnet50()
     print('load model...')
-    model.load_state_dict(torch.load('best.pth'))
+    model.load_state_dict(torch.load('yolo.pth'))
     model.eval()
     model.cuda()
-    image_name = 'dog.jpg'
+    image_name = 'cat.jpg'
     image = cv2.imread(image_name)
     print('predicting...')
     result = predict_gpu(model, image_name)
