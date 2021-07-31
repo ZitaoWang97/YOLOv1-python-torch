@@ -153,7 +153,7 @@ for epoch in range(num_epochs):
 
         pred = net(images)
         loss = criterion(pred, target)
-        validation_loss += loss.data[0]
+        validation_loss += loss.item()
     validation_loss /= len(test_loader)
     # vis.plot_train_val(loss_val=validation_loss)
 
